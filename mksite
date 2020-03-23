@@ -1,0 +1,61 @@
+#!/bin/dash
+#
+# build website
+# (c) 2020 Kiëd Llaentenn
+# See the LICENSE.md file for copyright info.
+
+#    ---
+#  template
+#    ---
+
+cat > /tmp/kiedtls_html <<EOF
+<!DOCTYPE html>
+<html lang="en-us">
+<head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><meta name=\"google-site-verification\" content=\"_Wt6XNMQUlHbi_wkIVeSwhekdKjuG3rmB1tYec-zu1c\" /><link href="data:image/png;base64,", rel=icon type=image/png>
+
+<title>some brainfuck stuff</title>
+
+<style>body{overflow-y:scroll;font-family:sans-serif}img,main,pre>code{display:block;margin:25px auto}main{padding:20px;max-width:600px;line-height:1.6;word-wrap:break-word}img{max-width:100%}pre>code{padding:20px;white-space:pre-wrap}code{background:#eee;padding:2px}blockquote{border-left:7px solid #ddd;padding:0 14px;color:#666;margin:0}h1,h2,h3,h4{line-height:1.2}hr{border:2px solid #ddd}</style></head><body>
+
+<main>
+<a href='/'>some brainfuck stuff</a>
+
+%%CONTENT%%
+
+<br><hr><a href="%%SOURCE%%">view raw</a>
+</main></body></html>
+
+EOF
+
+#     ---
+#  generator
+#     ---
+
+rm -rf $HOME/public_site/*
+
+for file in $(find site/ -name \*)
+do
+	if [ -d $file ]; then
+		printf "\tMKDIR\t\t${file#site}\n"
+		mkdir -p "$HOME/public_html/${file#site/}"
+		continue
+	fi
+
+	case $file in
+		*.md)
+			fname="${file#site/}"
+			printf "\tPANDOC\t\t$fname\n"
+			pandoc --from=markdown --to=html < $file | \
+				sed '/%%CONTENT%%/r /dev/stdin' /tmp/kiedtls_html | \
+				sed '/%%CONTENT%%/d' | \
+				sed "s/%%SOURCE%%/http:\/\/ctrl-c.club\/~kiedtl\/${fname}.txt/g" | \
+				cat > "$HOME/public_html/${fname%.md}.html"
+			cp -f "$file" "$HOME/public_html/${fname}.txt"
+		;;
+
+		*)
+			printf "\tCP\t\t${file#site/}\n"
+			cp -f "$file" "$HOME/public_html/${file#site/}"
+		;;
+	esac
+done
